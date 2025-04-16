@@ -34,11 +34,9 @@ def extract_friends_dialogue():
     for character, count in character_counts.most_common():
         print(f"- {character}: {count} utterances")
     
-    # Extract conversations by episode
     print("\nExtracting conversations...")
     episodes = defaultdict(list)
     
-    # First pass: group utterances by conversation_id
     for utt in corpus.iter_utterances():
         conv_id = utt.conversation_id
         episodes[conv_id].append({
@@ -49,13 +47,10 @@ def extract_friends_dialogue():
             'id': utt.id
         })
     
-    # Sort utterances within each conversation by timestamp
     for conv_id, utterances in episodes.items():
         episodes[conv_id] = sorted(utterances, key=lambda x: x['timestamp'])
     
-    # Create different output formats
     
-    # 1. Text file with simple formatting (speaker: text)
     with open("friends_data/friends_conversations.txt", "w", encoding="utf-8") as f:
         for conv_id, utterances in episodes.items():
             f.write(f"Episode: {conv_id}\n")
@@ -66,7 +61,6 @@ def extract_friends_dialogue():
                 f.write(f"{speaker}: {text}\n")
             f.write("\n\n")
     
-    # 2. Character-specific files
     for character in main_characters:
         with open(f"friends_data/{character.replace(' ', '_')}.txt", "w", encoding="utf-8") as f:
             for conv_id, utterances in episodes.items():
@@ -75,12 +69,9 @@ def extract_friends_dialogue():
                     speaker = utt['speaker']
                     text = utt['text'].replace("\n", " ")
                     
-                    # Add all utterances for context
                     conversation_context.append(f"{speaker}: {text}")
                     
-                    # When current speaker is our target character, output the context and their response
                     if speaker == character and len(conversation_context) > 1:
-                        # Write the conversation leading up to this point
                         f.write("CONTEXT:\n")
                         for i, context_line in enumerate(conversation_context[:-1]):
                             f.write(f"{context_line}\n")
@@ -89,14 +80,12 @@ def extract_friends_dialogue():
                         f.write(f"{conversation_context[-1]}\n\n")
                         f.write("-" * 50 + "\n\n")
     
-    # 3. JSON format for more structured data
     character_dialogues = {character: [] for character in main_characters}
     
     for conv_id, utterances in episodes.items():
         for i, utt in enumerate(utterances):
             speaker = utt['speaker']
             if speaker in main_characters:
-                # Get context (previous utterances in conversation)
                 context = []
                 for prev_utt in utterances[:i]:
                     context.append({
@@ -104,7 +93,6 @@ def extract_friends_dialogue():
                         "text": prev_utt['text']
                     })
                 
-                # Add this dialogue instance with its context
                 character_dialogues[speaker].append({
                     "episode": conv_id,
                     "context": context,
@@ -112,18 +100,15 @@ def extract_friends_dialogue():
                     "timestamp": utt['timestamp']
                 })
     
-    # Save JSON files
     for character, dialogues in character_dialogues.items():
         with open(f"friends_data/{character.replace(' ', '_')}_dialogues.json", "w", encoding="utf-8") as f:
             json.dump(dialogues, f, indent=2)
     
-    # 4. Combined format for GPT fine-tuning (JSONL format)
     with open("friends_data/friends_gpt_training.jsonl", "w", encoding="utf-8") as f:
         for conv_id, utterances in episodes.items():
             for i, utt in enumerate(utterances):
                 speaker = utt['speaker']
                 if speaker in main_characters and i > 0:
-                    # Format: {"prompt": "previous dialogue", "completion": "character's response"}
                     prev_dialogue = ""
                     for prev_utt in utterances[:i]:
                         prev_speaker = prev_utt['speaker']

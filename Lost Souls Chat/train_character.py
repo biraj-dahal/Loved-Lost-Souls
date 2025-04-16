@@ -46,7 +46,7 @@ def train_model(character_name, jsonl_path):
     gradient_accumulation_steps=2,        # Accumulate gradients
     num_train_epochs=2,
     save_total_limit=1,
-    fp16=True,                            # Use 16-bit floating point (if GPU supports)
+    fp16=False,                            # Use 16-bit floating point (if GPU supports)
     logging_dir=f"{OUTPUT_DIR}/{character_name}/logs",
     report_to="none")
 
