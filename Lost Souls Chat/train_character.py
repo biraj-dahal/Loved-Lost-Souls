@@ -5,9 +5,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments,
 from peft import get_peft_model, LoraConfig, TaskType
 
 # Base model you want to fine-tune
-BASE_MODEL = "distilgpt2"  # Or "TinyLlama/TinyLlama-1.1B" or similar
+# BASE_MODEL = "distilgpt2"  # Or "TinyLlama/TinyLlama-1.1B" or similar
 DATA_DIR = "jsonl_data"
-OUTPUT_DIR = "trained"
+OUTPUT_DIR = "trained2"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -21,22 +21,22 @@ def tokenize(example, tokenizer):
     return tokenizer(full_prompt, truncation=True, padding='max_length', max_length=512)
 
 def train_model(character_name, jsonl_path):
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    tokenizer.pad_token = tokenizer.eos_token
+    base_model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    model = AutoModelForCausalLM.from_pretrained(base_model)
+    tokenizer = AutoTokenizer.from_pretrained(base_model)
+
 
     data = load_data(jsonl_path)
     tokenized_data = data.map(lambda ex: tokenize(ex, tokenizer), batched=False)
 
-    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL)
-
     peft_config = LoraConfig(
-        r=8,
-        lora_alpha=16,
-        lora_dropout=0.1,
-        bias="none",
-        task_type="CAUSAL_LM",
-        target_modules=["c_attn", "c_proj", "q_attn", "v_attn"]
-    )
+    r=8,
+    lora_alpha=16,
+    target_modules=["q_proj", "v_proj"],  # specific to TinyLlama's architecture
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
 
     model = get_peft_model(model, peft_config)
 
@@ -46,7 +46,7 @@ def train_model(character_name, jsonl_path):
     gradient_accumulation_steps=2,        # Accumulate gradients
     num_train_epochs=2,
     save_total_limit=1,
-    fp16=False,                            # Use 16-bit floating point (if GPU supports)
+    fp16=True,                            # Use 16-bit floating point (if GPU supports)
     logging_dir=f"{OUTPUT_DIR}/{character_name}/logs",
     report_to="none")
 
